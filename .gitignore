@@ -37,3 +37,6 @@ desktop.ini
 
 # Project specific
 *.lnk
+
+# User preferences
+lightmd_config.json

@@ -8,7 +8,7 @@ A simple, lightweight WYSIWYG-style markdown editor designed for creating AI ins
 - **Template System**: Dynamic template insertion from the Templates folder
 - **Variable Tracking**: Automatically detects and lists variables in `{{VARIABLE}}` format
 - **Spell Checking**: Real-time spell checking with error highlighting (great for dyslexia support)
-- **Light/Dark Themes**: Toggle between light and dark modes
+- **Light/Dark Themes**: Toggle between light and dark modes with persistent preference
 - **File Operations**: New, Open, Save, Save As
 - **Edit Tools**: Cut, Copy, Paste, Insert Table
 - **Keyboard Shortcuts**: All major functions have keyboard shortcuts
@@ -75,6 +75,9 @@ Misspelled words are highlighted with a colored background. The spell checker ru
 - Headings are highlighted (lines starting with `#`, `##`, etc.)
 - Variables are highlighted in a distinct color
 - Insert table templates with Ctrl+T or Edit > Insert Table
+
+### Theme Preferences
+Your theme choice (light or dark) is automatically saved to `lightmd_config.json` and will persist across sessions. Simply toggle the theme once, and LightMD will remember your preference the next time you open it.
 
 ## Future Enhancements
 

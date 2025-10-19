@@ -9,6 +9,7 @@ import re
 from spellchecker import SpellChecker
 import os
 import glob
+import json
 
 
 class MarkdownEditor:
@@ -24,11 +25,14 @@ class MarkdownEditor:
         # Templates directory
         self.templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Templates")
 
+        # Config file path
+        self.config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lightmd_config.json")
+
+        # Load user preferences
+        self.load_preferences()
+
         # Spell checker
         self.spell_checker = SpellChecker()
-
-        # Theme tracking
-        self.is_dark_theme = False
 
         # Color schemes
         self.themes = {
@@ -373,6 +377,7 @@ class MarkdownEditor:
         """Toggle between light and dark themes"""
         self.is_dark_theme = not self.is_dark_theme
         self.apply_theme()
+        self.save_preferences()
 
     def apply_theme(self):
         """Apply the current theme colors"""
@@ -408,6 +413,35 @@ class MarkdownEditor:
         file_name = os.path.basename(self.current_file) if self.current_file else "Untitled"
         modified_marker = "*" if self.is_modified else ""
         self.root.title(f"LightMD - {file_name}{modified_marker}")
+
+    def load_preferences(self):
+        """Load user preferences from config file"""
+        default_preferences = {
+            'theme': 'light'
+        }
+
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r', encoding='utf-8') as f:
+                    preferences = json.load(f)
+                    self.is_dark_theme = preferences.get('theme', 'light') == 'dark'
+            else:
+                self.is_dark_theme = False
+        except Exception as e:
+            print(f"Error loading preferences: {e}")
+            self.is_dark_theme = False
+
+    def save_preferences(self):
+        """Save user preferences to config file"""
+        preferences = {
+            'theme': 'dark' if self.is_dark_theme else 'light'
+        }
+
+        try:
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(preferences, f, indent=2)
+        except Exception as e:
+            print(f"Error saving preferences: {e}")
 
     def get_templates(self):
         """Get all markdown templates from the Templates directory"""
