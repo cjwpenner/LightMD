@@ -52,7 +52,8 @@ class MarkdownEditor:
                 'select_fg': '#FFFFFF',
                 'heading_fg': '#0066CC',
                 'variable_fg': '#CC6600',
-                'spell_error_bg': '#FFE6E6'
+                'spell_error_bg': '#FFE6E6',
+                'window_bg': '#F0F0F0'
             },
             'dark': {
                 'bg': '#1E1E1E',
@@ -63,7 +64,8 @@ class MarkdownEditor:
                 'select_fg': '#FFFFFF',
                 'heading_fg': '#4FC1FF',
                 'variable_fg': '#FFAB70',
-                'spell_error_bg': '#4A1F1F'
+                'spell_error_bg': '#4A1F1F',
+                'window_bg': '#1E1E1E'
             }
         }
 
@@ -145,8 +147,8 @@ class MarkdownEditor:
         variables_frame = ttk.Frame(sidebar_paned)
         sidebar_paned.add(variables_frame, weight=1)
 
-        sidebar_label = ttk.Label(variables_frame, text="Variables", font=('Arial', 10, 'bold'))
-        sidebar_label.pack(pady=5)
+        sidebar_label = ttk.Label(variables_frame, text="{{VARIABLES}}", font=('Arial', 10, 'bold'), anchor='w')
+        sidebar_label.pack(pady=5, fill=tk.X, padx=5)
 
         var_scroll = ttk.Scrollbar(variables_frame)
         var_scroll.pack(side=tk.RIGHT, fill=tk.Y)
@@ -169,14 +171,18 @@ class MarkdownEditor:
         chat_label = ttk.Label(chat_header_frame, text="AI Assistant", font=('Arial', 10, 'bold'))
         chat_label.pack(side=tk.LEFT)
 
-        # Model selector
-        self.model_var = tk.StringVar(value="claude-sonnet-4-5-20250929")
+        # Model selector - map display names to API model IDs
+        self.model_display_to_id = {
+            "Haiku 4.5": "claude-haiku-4-5-20251001",
+            "Sonnet 4.5": "claude-sonnet-4-5-20250929"
+        }
+        self.model_var = tk.StringVar(value="Haiku 4.5")
         model_dropdown = ttk.Combobox(
             chat_header_frame,
             textvariable=self.model_var,
-            values=["claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"],
+            values=["Haiku 4.5", "Sonnet 4.5"],
             state="readonly",
-            width=25
+            width=15
         )
         model_dropdown.pack(side=tk.RIGHT)
 
@@ -454,6 +460,9 @@ class MarkdownEditor:
         """Apply the current theme colors"""
         theme = self.themes['dark' if self.is_dark_theme else 'light']
 
+        # Apply window background color
+        self.root.config(bg=theme['window_bg'])
+
         # Apply to text editor
         self.text_editor.config(
             bg=theme['bg'],
@@ -475,6 +484,13 @@ class MarkdownEditor:
         self.chat_display.config(
             bg=theme['sidebar_bg'],
             fg=theme['sidebar_fg']
+        )
+
+        # Apply to chat input
+        self.chat_input.config(
+            bg=theme['bg'],
+            fg=theme['fg'],
+            insertbackground=theme['fg']
         )
 
         # Update syntax highlighting tags
@@ -675,9 +691,10 @@ The user's current document is provided in the context. Be helpful, concise, and
                 "content": f"Current document:\n```markdown\n{document_content}\n```\n\nUser question: {user_message}"
             })
 
-            # Call API
+            # Call API (convert display name to model ID)
+            model_id = self.model_display_to_id.get(self.model_var.get(), "claude-haiku-4-5-20251001")
             response = self.anthropic_client.messages.create(
-                model=self.model_var.get(),
+                model=model_id,
                 max_tokens=4096,
                 system=system_prompt,
                 messages=messages
