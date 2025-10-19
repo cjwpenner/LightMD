@@ -206,9 +206,15 @@ class MarkdownEditor:
         send_button = ttk.Button(input_frame, text="Send", command=self.send_chat_message)
         send_button.pack(side=tk.RIGHT, padx=(5, 0))
 
-        # Configure API key button
-        config_button = ttk.Button(chat_frame, text="Configure API Key", command=self.configure_api_key)
-        config_button.pack(pady=5)
+        # Button frame for API key and clear chat
+        button_frame = ttk.Frame(chat_frame)
+        button_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        config_button = ttk.Button(button_frame, text="Configure API Key", command=self.configure_api_key)
+        config_button.pack(side=tk.LEFT, padx=(0, 5))
+
+        clear_button = ttk.Button(button_frame, text="Clear Chat", command=self.clear_chat)
+        clear_button.pack(side=tk.LEFT)
 
         # Status Bar
         self.status_bar = ttk.Label(
@@ -647,8 +653,12 @@ You can:
 2. Ask clarifying questions
 3. Directly edit the document using special commands:
    - To replace text: start your response with "REPLACE: [old_text] WITH: [new_text]"
+     * For empty/nearly empty documents, just put the user's prompt text in [old_text] and your full content in [new_text]
+     * For existing documents, use a SHORT excerpt (10-30 words) from the document in [old_text]
    - To insert text at cursor: start your response with "INSERT: [text]"
    - To append text: start your response with "APPEND: [text]"
+
+IMPORTANT: When creating new content for an empty document, use REPLACE with the user's question/request as [old_text] and your full response as [new_text]. The system will detect the empty document and insert your content.
 
 The user's current document is provided in the context. Be helpful, concise, and actionable."""
 
@@ -698,9 +708,16 @@ The user's current document is provided in the context. Be helpful, concise, and
                     new_text = parts[1].strip()
 
                     # Get current content
-                    content = self.text_editor.get('1.0', tk.END)
+                    content = self.text_editor.get('1.0', tk.END).strip()
 
-                    if old_text in content:
+                    # If document is mostly empty (less than 50 chars), just replace everything
+                    if len(content) < 50:
+                        self.text_editor.delete('1.0', tk.END)
+                        self.text_editor.insert('1.0', new_text)
+                        self.is_modified = True
+                        self.update_title()
+                        self.append_chat_message("Assistant", "✓ Added content to document")
+                    elif old_text in content:
                         # Find and replace
                         start_idx = content.find(old_text)
                         if start_idx != -1:
@@ -714,9 +731,9 @@ The user's current document is provided in the context. Be helpful, concise, and
                             self.is_modified = True
                             self.update_title()
 
-                            self.append_chat_message("Assistant", f"✓ Replaced text in document")
+                            self.append_chat_message("Assistant", "✓ Replaced text in document")
                     else:
-                        self.append_chat_message("Assistant", "Could not find the specified text to replace.")
+                        self.append_chat_message("Assistant", "Could not find the specified text to replace. Try being more specific or use a shorter excerpt.")
             except Exception as e:
                 self.append_chat_message("System", f"Error processing REPLACE command: {e}")
 
@@ -737,6 +754,20 @@ The user's current document is provided in the context. Be helpful, concise, and
         else:
             # Regular response
             self.append_chat_message("Assistant", response)
+
+    def clear_chat(self):
+        """Clear the chat history and display"""
+        if self.chat_history or self.chat_display.get('1.0', tk.END).strip():
+            response = messagebox.askyesnocancel(
+                "Clear Chat",
+                "Clear all chat history? This cannot be undone."
+            )
+            if response:
+                self.chat_history = []
+                self.chat_display.config(state=tk.NORMAL)
+                self.chat_display.delete('1.0', tk.END)
+                self.chat_display.config(state=tk.DISABLED)
+                self.status_bar.config(text="Chat history cleared")
 
     def exit_app(self):
         """Exit the application"""
