@@ -5,6 +5,7 @@ A simple, lightweight WYSIWYG-style markdown editor designed for creating AI ins
 ## Features
 
 - **Clean Interface**: Simple text editor with markdown syntax highlighting
+- **Template System**: Dynamic template insertion from the Templates folder
 - **Variable Tracking**: Automatically detects and lists variables in `{{VARIABLE}}` format
 - **Spell Checking**: Real-time spell checking with error highlighting (great for dyslexia support)
 - **Light/Dark Themes**: Toggle between light and dark modes
@@ -46,6 +47,18 @@ python lightmd.py
 - **Ctrl+D**: Toggle dark/light theme
 
 ## Usage
+
+### Templates
+The **Insert** menu dynamically shows all `.md` files from the `Templates` folder. Simply:
+1. Click **Insert** in the menu bar
+2. Select a template (e.g., Agent, PRD)
+3. The template content loads into a new document
+4. Save with a new filename - your original template remains unchanged
+
+To add your own templates:
+- Place any `.md` file in the `Templates` folder
+- Restart LightMD or reopen the Insert menu
+- Your new templates will appear automatically
 
 ### Variables
 Variables are automatically detected when you type them in the format `{{VARIABLE_NAME}}`. They must:

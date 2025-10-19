@@ -8,6 +8,7 @@ from tkinter import ttk, filedialog, messagebox, font as tkfont
 import re
 from spellchecker import SpellChecker
 import os
+import glob
 
 
 class MarkdownEditor:
@@ -19,6 +20,9 @@ class MarkdownEditor:
         # Current file tracking
         self.current_file = None
         self.is_modified = False
+
+        # Templates directory
+        self.templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Templates")
 
         # Spell checker
         self.spell_checker = SpellChecker()
@@ -83,6 +87,11 @@ class MarkdownEditor:
         edit_menu.add_command(label="Paste", command=self.paste_text, accelerator="Ctrl+V")
         edit_menu.add_separator()
         edit_menu.add_command(label="Insert Table", command=self.insert_table, accelerator="Ctrl+T")
+
+        # Insert Menu (for templates)
+        self.insert_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Insert", menu=self.insert_menu)
+        self.populate_templates_menu()
 
         # Theme Menu
         theme_menu = tk.Menu(menubar, tearoff=0)
@@ -399,6 +408,66 @@ class MarkdownEditor:
         file_name = os.path.basename(self.current_file) if self.current_file else "Untitled"
         modified_marker = "*" if self.is_modified else ""
         self.root.title(f"LightMD - {file_name}{modified_marker}")
+
+    def get_templates(self):
+        """Get all markdown templates from the Templates directory"""
+        if not os.path.exists(self.templates_dir):
+            return []
+
+        template_files = glob.glob(os.path.join(self.templates_dir, "*.md"))
+        templates = []
+
+        for template_path in template_files:
+            template_name = os.path.splitext(os.path.basename(template_path))[0]
+            templates.append((template_name, template_path))
+
+        return sorted(templates)
+
+    def populate_templates_menu(self):
+        """Populate the Insert menu with available templates"""
+        # Clear existing menu items
+        self.insert_menu.delete(0, tk.END)
+
+        templates = self.get_templates()
+
+        if not templates:
+            self.insert_menu.add_command(label="No templates found", state=tk.DISABLED)
+        else:
+            for template_name, template_path in templates:
+                self.insert_menu.add_command(
+                    label=template_name,
+                    command=lambda path=template_path: self.load_template(path)
+                )
+
+    def load_template(self, template_path):
+        """Load a template into the editor"""
+        # Check if current document has unsaved changes
+        if self.is_modified:
+            response = messagebox.askyesnocancel(
+                "Save Changes",
+                "Do you want to save changes to the current file?"
+            )
+            if response:  # Yes
+                self.save_file()
+            elif response is None:  # Cancel
+                return
+
+        try:
+            with open(template_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+                self.text_editor.delete('1.0', tk.END)
+                self.text_editor.insert('1.0', content)
+
+                # Clear current file - this is a new document based on template
+                self.current_file = None
+                self.is_modified = True  # Mark as modified since it's unsaved
+                self.update_title()
+                self.update_highlighting()
+
+                template_name = os.path.basename(template_path)
+                self.status_bar.config(text=f"Template loaded: {template_name}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not load template:\n{str(e)}")
 
     def exit_app(self):
         """Exit the application"""

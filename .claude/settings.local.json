@@ -7,7 +7,9 @@
       "Bash(git init:*)",
       "Bash(git config:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: LightMD - Lightweight Markdown Editor\n\nAdd complete Python-based markdown editor with the following features:\n- WYSIWYG-style editing with syntax highlighting\n- Real-time spell checking with error highlighting\n- Variable tracking sidebar ({{VARIABLE}} format)\n- Light/dark theme toggle\n- File operations (New, Open, Save, Save As)\n- Edit tools (Cut, Copy, Paste, Insert Table)\n- Keyboard shortcuts for all major functions\n- Windows launcher scripts and desktop shortcut creator\n\nBuilt with tkinter for cross-platform compatibility and pyspellchecker\nfor spell checking. Designed specifically for creating AI instruction\ndocuments and PRDs.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: LightMD - Lightweight Markdown Editor\n\nAdd complete Python-based markdown editor with the following features:\n- WYSIWYG-style editing with syntax highlighting\n- Real-time spell checking with error highlighting\n- Variable tracking sidebar ({{VARIABLE}} format)\n- Light/dark theme toggle\n- File operations (New, Open, Save, Save As)\n- Edit tools (Cut, Copy, Paste, Insert Table)\n- Keyboard shortcuts for all major functions\n- Windows launcher scripts and desktop shortcut creator\n\nBuilt with tkinter for cross-platform compatibility and pyspellchecker\nfor spell checking. Designed specifically for creating AI instruction\ndocuments and PRDs.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(gh repo create:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
