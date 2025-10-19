@@ -174,7 +174,7 @@ class MarkdownEditor:
         model_dropdown = ttk.Combobox(
             chat_header_frame,
             textvariable=self.model_var,
-            values=["claude-sonnet-4-5-20250929", "claude-3-5-haiku-20241022"],
+            values=["claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001"],
             state="readonly",
             width=25
         )
