@@ -5,6 +5,7 @@ A simple, lightweight WYSIWYG-style markdown editor designed for creating AI ins
 ## Features
 
 - **Clean Interface**: Simple text editor with markdown syntax highlighting
+- **AI Assistant**: Integrated Claude AI chat to help create and edit documents
 - **Template System**: Dynamic template insertion from the Templates folder
 - **Variable Tracking**: Automatically detects and lists variables in `{{VARIABLE}}` format
 - **Spell Checking**: Real-time spell checking with error highlighting (great for dyslexia support)
@@ -76,16 +77,44 @@ Misspelled words are highlighted with a colored background. The spell checker ru
 - Variables are highlighted in a distinct color
 - Insert table templates with Ctrl+T or Edit > Insert Table
 
+### AI Assistant
+The integrated AI assistant helps you create and edit markdown documents:
+
+**Getting Started**:
+1. Click "Configure API Key" in the AI Assistant panel
+2. Enter your Anthropic API key (get one at https://console.anthropic.com/)
+3. Select your preferred model: Claude Sonnet 4.5 (default) or Claude Haiku 4.5
+4. Start chatting!
+
+**What the AI Can Do**:
+- **Provide Advice**: Ask questions about your document structure, content, or best practices
+- **Ask Clarifying Questions**: The AI helps you think through your requirements
+- **Direct Edits**: The AI can directly modify your document using special commands:
+  - REPLACE: Changes specific text in your document
+  - INSERT: Adds text at your cursor position
+  - APPEND: Adds text to the end of your document
+
+**Context Awareness**:
+- The AI always has access to your current document content
+- Chat history is maintained for contextual conversations
+- Ask about variables, structure, or request edits to specific sections
+
+**Example Prompts**:
+- "Help me structure a PRD for a markdown editor"
+- "Add a section about error handling"
+- "Improve the clarity of the introduction"
+- "What variables should I define for this agent description?"
+
 ### Theme Preferences
 Your theme choice (light or dark) is automatically saved to `lightmd_config.json` and will persist across sessions. Simply toggle the theme once, and LightMD will remember your preference the next time you open it.
 
 ## Future Enhancements
 
 Planned features include:
-- AI integration window for LLM API calls
 - Custom variable templates
 - Export to PDF
 - Preview pane with rendered markdown
+- Extended AI commands for more complex document transformations
 
 ## License
 

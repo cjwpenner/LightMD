@@ -4,12 +4,14 @@ A simple WYSIWYG-style markdown editor for creating AI instruction documents
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, font as tkfont
+from tkinter import ttk, filedialog, messagebox, font as tkfont, simpledialog
 import re
 from spellchecker import SpellChecker
 import os
 import glob
 import json
+import threading
+from anthropic import Anthropic
 
 
 class MarkdownEditor:
@@ -30,6 +32,11 @@ class MarkdownEditor:
 
         # Load user preferences
         self.load_preferences()
+
+        # AI Chat components
+        self.chat_history = []
+        self.anthropic_client = None
+        self.init_anthropic_client()
 
         # Spell checker
         self.spell_checker = SpellChecker()
@@ -126,24 +133,82 @@ class MarkdownEditor:
         self.text_editor.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         text_scroll.config(command=self.text_editor.yview)
 
-        # Variables Sidebar (right side)
+        # Right Sidebar (Variables + AI Chat)
         sidebar_frame = ttk.Frame(main_container)
         main_container.add(sidebar_frame, weight=1)
 
-        sidebar_label = ttk.Label(sidebar_frame, text="Variables", font=('Arial', 10, 'bold'))
+        # Split sidebar vertically
+        sidebar_paned = ttk.PanedWindow(sidebar_frame, orient=tk.VERTICAL)
+        sidebar_paned.pack(fill=tk.BOTH, expand=True)
+
+        # Variables Section (top)
+        variables_frame = ttk.Frame(sidebar_paned)
+        sidebar_paned.add(variables_frame, weight=1)
+
+        sidebar_label = ttk.Label(variables_frame, text="Variables", font=('Arial', 10, 'bold'))
         sidebar_label.pack(pady=5)
 
-        # Variables listbox
-        var_scroll = ttk.Scrollbar(sidebar_frame)
+        var_scroll = ttk.Scrollbar(variables_frame)
         var_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.variables_listbox = tk.Listbox(
-            sidebar_frame,
+            variables_frame,
             yscrollcommand=var_scroll.set,
             font=('Consolas', 10)
         )
         self.variables_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         var_scroll.config(command=self.variables_listbox.yview)
+
+        # AI Chat Section (bottom)
+        chat_frame = ttk.Frame(sidebar_paned)
+        sidebar_paned.add(chat_frame, weight=2)
+
+        chat_header_frame = ttk.Frame(chat_frame)
+        chat_header_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        chat_label = ttk.Label(chat_header_frame, text="AI Assistant", font=('Arial', 10, 'bold'))
+        chat_label.pack(side=tk.LEFT)
+
+        # Model selector
+        self.model_var = tk.StringVar(value="claude-sonnet-4-5-20250929")
+        model_dropdown = ttk.Combobox(
+            chat_header_frame,
+            textvariable=self.model_var,
+            values=["claude-sonnet-4-5-20250929", "claude-haiku-4-5-20250924"],
+            state="readonly",
+            width=25
+        )
+        model_dropdown.pack(side=tk.RIGHT)
+
+        # Chat display
+        chat_scroll = ttk.Scrollbar(chat_frame)
+        chat_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.chat_display = tk.Text(
+            chat_frame,
+            wrap=tk.WORD,
+            font=('Consolas', 9),
+            yscrollcommand=chat_scroll.set,
+            height=15,
+            state=tk.DISABLED
+        )
+        self.chat_display.pack(fill=tk.BOTH, expand=True, padx=5)
+        chat_scroll.config(command=self.chat_display.yview)
+
+        # Chat input frame
+        input_frame = ttk.Frame(chat_frame)
+        input_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        self.chat_input = tk.Entry(input_frame, font=('Consolas', 10))
+        self.chat_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.chat_input.bind('<Return>', lambda e: self.send_chat_message())
+
+        send_button = ttk.Button(input_frame, text="Send", command=self.send_chat_message)
+        send_button.pack(side=tk.RIGHT, padx=(5, 0))
+
+        # Configure API key button
+        config_button = ttk.Button(chat_frame, text="Configure API Key", command=self.configure_api_key)
+        config_button.pack(pady=5)
 
         # Status Bar
         self.status_bar = ttk.Label(
@@ -400,6 +465,12 @@ class MarkdownEditor:
             selectforeground=theme['select_fg']
         )
 
+        # Apply to chat display
+        self.chat_display.config(
+            bg=theme['sidebar_bg'],
+            fg=theme['sidebar_fg']
+        )
+
         # Update syntax highlighting tags
         self.text_editor.tag_configure('heading', foreground=theme['heading_fg'])
         self.text_editor.tag_configure('variable', foreground=theme['variable_fg'])
@@ -417,29 +488,30 @@ class MarkdownEditor:
     def load_preferences(self):
         """Load user preferences from config file"""
         default_preferences = {
-            'theme': 'light'
+            'theme': 'light',
+            'anthropic_api_key': ''
         }
 
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    preferences = json.load(f)
-                    self.is_dark_theme = preferences.get('theme', 'light') == 'dark'
+                    self.preferences = json.load(f)
+                    self.is_dark_theme = self.preferences.get('theme', 'light') == 'dark'
             else:
+                self.preferences = default_preferences
                 self.is_dark_theme = False
         except Exception as e:
             print(f"Error loading preferences: {e}")
+            self.preferences = default_preferences
             self.is_dark_theme = False
 
     def save_preferences(self):
         """Save user preferences to config file"""
-        preferences = {
-            'theme': 'dark' if self.is_dark_theme else 'light'
-        }
+        self.preferences['theme'] = 'dark' if self.is_dark_theme else 'light'
 
         try:
             with open(self.config_file, 'w', encoding='utf-8') as f:
-                json.dump(preferences, f, indent=2)
+                json.dump(self.preferences, f, indent=2)
         except Exception as e:
             print(f"Error saving preferences: {e}")
 
@@ -502,6 +574,169 @@ class MarkdownEditor:
                 self.status_bar.config(text=f"Template loaded: {template_name}")
         except Exception as e:
             messagebox.showerror("Error", f"Could not load template:\n{str(e)}")
+
+    def init_anthropic_client(self):
+        """Initialize the Anthropic API client"""
+        api_key = self.preferences.get('anthropic_api_key', '')
+        if api_key:
+            try:
+                self.anthropic_client = Anthropic(api_key=api_key)
+            except Exception as e:
+                print(f"Error initializing Anthropic client: {e}")
+                self.anthropic_client = None
+        else:
+            self.anthropic_client = None
+
+    def configure_api_key(self):
+        """Open dialog to configure Anthropic API key"""
+        current_key = self.preferences.get('anthropic_api_key', '')
+        masked_key = f"...{current_key[-4:]}" if len(current_key) > 4 else ""
+
+        api_key = simpledialog.askstring(
+            "Configure API Key",
+            f"Enter your Anthropic API Key:\n(Current: {masked_key if masked_key else 'Not set'})",
+            show='*'
+        )
+
+        if api_key:
+            self.preferences['anthropic_api_key'] = api_key
+            self.save_preferences()
+            self.init_anthropic_client()
+            messagebox.showinfo("Success", "API key saved successfully!")
+
+    def send_chat_message(self):
+        """Send a message to the AI assistant"""
+        user_message = self.chat_input.get().strip()
+        if not user_message:
+            return
+
+        if not self.anthropic_client:
+            messagebox.showwarning(
+                "API Key Required",
+                "Please configure your Anthropic API key first using the 'Configure API Key' button."
+            )
+            return
+
+        # Clear input
+        self.chat_input.delete(0, tk.END)
+
+        # Display user message
+        self.append_chat_message("You", user_message)
+
+        # Start AI response in background thread
+        threading.Thread(target=self.get_ai_response, args=(user_message,), daemon=True).start()
+
+    def append_chat_message(self, sender, message):
+        """Append a message to the chat display"""
+        self.chat_display.config(state=tk.NORMAL)
+        self.chat_display.insert(tk.END, f"\n{sender}: {message}\n")
+        self.chat_display.see(tk.END)
+        self.chat_display.config(state=tk.DISABLED)
+
+    def get_ai_response(self, user_message):
+        """Get response from Claude AI (runs in background thread)"""
+        try:
+            # Get current document content
+            document_content = self.text_editor.get('1.0', tk.END).strip()
+
+            # Build context
+            system_prompt = """You are an AI assistant helping to create and edit markdown documents for AI instructions, PRDs, and agent descriptions.
+
+You can:
+1. Provide advice and suggestions
+2. Ask clarifying questions
+3. Directly edit the document using special commands:
+   - To replace text: start your response with "REPLACE: [old_text] WITH: [new_text]"
+   - To insert text at cursor: start your response with "INSERT: [text]"
+   - To append text: start your response with "APPEND: [text]"
+
+The user's current document is provided in the context. Be helpful, concise, and actionable."""
+
+            # Build messages with history
+            messages = []
+
+            # Add chat history (last 5 exchanges)
+            for msg in self.chat_history[-10:]:
+                messages.append(msg)
+
+            # Add current message with document context
+            messages.append({
+                "role": "user",
+                "content": f"Current document:\n```markdown\n{document_content}\n```\n\nUser question: {user_message}"
+            })
+
+            # Call API
+            response = self.anthropic_client.messages.create(
+                model=self.model_var.get(),
+                max_tokens=4096,
+                system=system_prompt,
+                messages=messages
+            )
+
+            assistant_message = response.content[0].text
+
+            # Update chat history
+            self.chat_history.append({"role": "user", "content": user_message})
+            self.chat_history.append({"role": "assistant", "content": assistant_message})
+
+            # Process response (check for special commands)
+            self.root.after(0, lambda: self.process_ai_response(assistant_message))
+
+        except Exception as e:
+            error_msg = f"Error: {str(e)}"
+            self.root.after(0, lambda: self.append_chat_message("System", error_msg))
+
+    def process_ai_response(self, response):
+        """Process AI response and handle special commands"""
+        # Check for special commands
+        if response.startswith("REPLACE:"):
+            try:
+                # Parse REPLACE command
+                parts = response.split("WITH:", 1)
+                if len(parts) == 2:
+                    old_text = parts[0].replace("REPLACE:", "").strip()
+                    new_text = parts[1].strip()
+
+                    # Get current content
+                    content = self.text_editor.get('1.0', tk.END)
+
+                    if old_text in content:
+                        # Find and replace
+                        start_idx = content.find(old_text)
+                        if start_idx != -1:
+                            # Calculate position
+                            start_pos = f"1.0 + {start_idx} chars"
+                            end_pos = f"1.0 + {start_idx + len(old_text)} chars"
+
+                            # Perform replacement
+                            self.text_editor.delete(start_pos, end_pos)
+                            self.text_editor.insert(start_pos, new_text)
+                            self.is_modified = True
+                            self.update_title()
+
+                            self.append_chat_message("Assistant", f"✓ Replaced text in document")
+                    else:
+                        self.append_chat_message("Assistant", "Could not find the specified text to replace.")
+            except Exception as e:
+                self.append_chat_message("System", f"Error processing REPLACE command: {e}")
+
+        elif response.startswith("INSERT:"):
+            text_to_insert = response.replace("INSERT:", "").strip()
+            self.text_editor.insert(tk.INSERT, text_to_insert)
+            self.is_modified = True
+            self.update_title()
+            self.append_chat_message("Assistant", f"✓ Inserted text at cursor position")
+
+        elif response.startswith("APPEND:"):
+            text_to_append = response.replace("APPEND:", "").strip()
+            self.text_editor.insert(tk.END, f"\n{text_to_append}")
+            self.is_modified = True
+            self.update_title()
+            self.append_chat_message("Assistant", f"✓ Appended text to document")
+
+        else:
+            # Regular response
+            self.append_chat_message("Assistant", response)
 
     def exit_app(self):
         """Exit the application"""
