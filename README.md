@@ -62,10 +62,11 @@ To add your own templates:
 - Your new templates will appear automatically
 
 ### Variables
-Variables are automatically detected when you type them in the format `{{VARIABLE_NAME}}`. They must:
-- Start with a letter or underscore
-- Contain only uppercase letters, numbers, and underscores
-- Be enclosed in double curly braces
+Variables are automatically detected when you type them in the format `{{variable_name}}`. They must:
+- Be enclosed in double curly braces `{{}}`
+- Start with a letter (a-z, A-Z) or underscore
+- Contain only letters, numbers, and underscores (no spaces or hyphens)
+- Can use any naming style: `{{USER_NAME}}`, `{{userName}}`, `{{user_name}}`
 
 All detected variables appear in the sidebar. Double-click a variable to insert it at your cursor position.
 

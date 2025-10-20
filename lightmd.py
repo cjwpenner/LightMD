@@ -294,8 +294,8 @@ class MarkdownEditor:
             end_idx = self.text_editor.index(f'1.0 + {match.end()} chars')
             self.text_editor.tag_add('heading', start_idx, end_idx)
 
-        # Highlight variables
-        for match in re.finditer(r'\{\{[A-Z_][A-Z0-9_]*\}\}', content):
+        # Highlight variables (allow any letter case, numbers, underscores)
+        for match in re.finditer(r'\{\{[a-zA-Z_][a-zA-Z0-9_]*\}\}', content):
             start_idx = self.text_editor.index(f'1.0 + {match.start()} chars')
             end_idx = self.text_editor.index(f'1.0 + {match.end()} chars')
             self.text_editor.tag_add('variable', start_idx, end_idx)
@@ -303,7 +303,7 @@ class MarkdownEditor:
     def update_variables_list(self):
         """Update the variables sidebar"""
         content = self.text_editor.get('1.0', tk.END)
-        variables = set(re.findall(r'\{\{([A-Z_][A-Z0-9_]*)\}\}', content))
+        variables = set(re.findall(r'\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}', content))
 
         # Update listbox
         self.variables_listbox.delete(0, tk.END)
@@ -661,22 +661,50 @@ class MarkdownEditor:
             # Get current document content
             document_content = self.text_editor.get('1.0', tk.END).strip()
 
+            # Get available templates dynamically
+            templates = self.get_templates()
+            if templates:
+                template_names = ", ".join([name for name, _ in templates])
+                template_info = f"- Template system: provides pre-built templates ({template_names})"
+            else:
+                template_info = "- Template system: no templates currently available"
+
             # Build context
-            system_prompt = """You are an AI assistant helping to create and edit markdown documents for AI instructions, PRDs, and agent descriptions.
+            system_prompt = f"""You are an AI assistant integrated into LightMD, a specialized markdown editor for creating AI instruction documents, PRDs, and agent descriptions.
 
+## About LightMD
+LightMD is a focused writing tool with these features:
+- Variable tracking: detects `{{{{variable_name}}}}` format (any case: camelCase, snake_case, ALL_CAPS)
+{template_info}
+- Spell checking and markdown syntax highlighting
+- Light/dark themes
+- Users can access templates via Insert menu
+
+For detailed help, users can load the "1_Help" template from the Insert menu (if available).
+
+## Your Capabilities
 You can:
-1. Provide advice and suggestions
-2. Ask clarifying questions
-3. Directly edit the document using special commands:
-   - To replace text: start your response with "REPLACE: [old_text] WITH: [new_text]"
-     * For empty/nearly empty documents, just put the user's prompt text in [old_text] and your full content in [new_text]
-     * For existing documents, use a SHORT excerpt (10-30 words) from the document in [old_text]
-   - To insert text at cursor: start your response with "INSERT: [text]"
-   - To append text: start your response with "APPEND: [text]"
+1. **Provide Advice**: Answer questions about document structure, best practices, AI instruction writing, variable usage, and template selection
+2. **Ask Clarifying Questions**: Help users think through requirements
+3. **Directly Edit Documents**: Use special commands to modify the current document:
+   - `REPLACE: [old_text] WITH: [new_text]` - Changes specific text
+     * For empty/nearly empty documents: put user's prompt in [old_text], full content in [new_text]
+     * For existing documents: use SHORT excerpt (10-30 words) from document in [old_text]
+   - `INSERT: [text]` - Adds text at cursor position
+   - `APPEND: [text]` - Adds text to end of document
 
-IMPORTANT: When creating new content for an empty document, use REPLACE with the user's question/request as [old_text] and your full response as [new_text]. The system will detect the empty document and insert your content.
+## Context Awareness
+- The user's current document is provided with each message
+- You have access to the last 10 conversation exchanges
+- Be helpful, concise, and actionable
+- Reference LightMD features when relevant (e.g., "You can track this in the variables sidebar")
 
-The user's current document is provided in the context. Be helpful, concise, and actionable."""
+## Important Guidelines
+- When creating new content for empty documents: use REPLACE with user's question as [old_text]
+- Suggest appropriate templates when relevant to user's task
+- Encourage use of variables for reusable values
+- Write clear, structured AI instructions following best practices
+- Be specific about which template to use from the Insert menu"""
 
             # Build messages with history
             messages = []
