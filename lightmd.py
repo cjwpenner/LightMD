@@ -30,6 +30,9 @@ class MarkdownEditor:
         # Config file path
         self.config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lightmd_config.json")
 
+        # Custom dictionary file path
+        self.custom_dict_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "custom_dictionary.txt")
+
         # Load user preferences
         self.load_preferences()
 
@@ -38,8 +41,28 @@ class MarkdownEditor:
         self.anthropic_client = None
         self.init_anthropic_client()
 
-        # Spell checker
+        # Spell checker with technical terms
         self.spell_checker = SpellChecker()
+
+        # Add common technical terms to dictionary
+        technical_terms = [
+            'microservice', 'microservices', 'api', 'apis', 'json', 'xml',
+            'yaml', 'kubernetes', 'docker', 'terraform', 'airflow', 'saas',
+            'paas', 'iaas', 'devops', 'cicd', 'github', 'gitlab', 'bitbucket',
+            'mongodb', 'postgresql', 'mysql', 'redis', 'elasticsearch',
+            'graphql', 'restful', 'websocket', 'oauth', 'jwt', 'sdk',
+            'cli', 'gui', 'endpoint', 'endpoints', 'regex', 'async', 'await',
+            'webhook', 'webhooks', 'backend', 'frontend', 'middleware',
+            'typescript', 'javascript', 'python', 'nodejs', 'reactjs',
+            'kubernetes', 'config', 'configs', 'env', 'localhost',
+            'namespace', 'namespaces', 'metadata', 'workflow', 'workflows',
+            'plugin', 'plugins', 'repo', 'repos', 'deploy', 'deployment',
+            'scalability', 'observability', 'telemetry', 'traceability'
+        ]
+        self.spell_checker.word_frequency.load_words(technical_terms)
+
+        # Load user's custom dictionary
+        self.load_custom_dictionary()
 
         # Color schemes
         self.themes = {
@@ -101,9 +124,9 @@ class MarkdownEditor:
         edit_menu.add_separator()
         edit_menu.add_command(label="Insert Table", command=self.insert_table, accelerator="Ctrl+T")
 
-        # Insert Menu (for templates)
-        self.insert_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Insert", menu=self.insert_menu)
+        # Templates Menu
+        self.templates_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Templates", menu=self.templates_menu)
         self.populate_templates_menu()
 
         # Theme Menu
@@ -255,6 +278,9 @@ class MarkdownEditor:
         # Variable insertion on double-click
         self.variables_listbox.bind('<Double-Button-1>', self.insert_variable_from_sidebar)
 
+        # Right-click for spell check suggestions
+        self.text_editor.bind('<Button-3>', self.show_spell_suggestions)
+
         # Close window event
         self.root.protocol("WM_DELETE_WINDOW", self.exit_app)
 
@@ -341,6 +367,116 @@ class MarkdownEditor:
             variable = self.variables_listbox.get(selection[0])
             self.text_editor.insert(tk.INSERT, variable)
             self.text_editor.focus_set()
+
+    def show_spell_suggestions(self, event):
+        """Show spell correction suggestions on right-click"""
+        # Get the position clicked
+        index = self.text_editor.index(f"@{event.x},{event.y}")
+
+        # Check if the clicked position has a spell_error tag
+        tags = self.text_editor.tag_names(index)
+        if 'spell_error' not in tags:
+            # No spelling error at this position, show default context menu
+            return
+
+        # Get the word at this position
+        # Find word boundaries
+        word_start = self.text_editor.search(r'\s', index, backwards=True, regexp=True)
+        if not word_start:
+            word_start = '1.0'
+        else:
+            word_start = self.text_editor.index(f"{word_start}+1c")
+
+        word_end = self.text_editor.search(r'\s', index, regexp=True)
+        if not word_end:
+            word_end = self.text_editor.index('end')
+
+        misspelled_word = self.text_editor.get(word_start, word_end).strip()
+
+        # Get suggestions from spell checker
+        candidates = self.spell_checker.candidates(misspelled_word)
+        suggestions = list(candidates)[:5] if candidates else []  # Top 5 suggestions, handle None
+
+        # Create context menu
+        context_menu = tk.Menu(self.text_editor, tearoff=0)
+
+        if suggestions:
+            for suggestion in suggestions:
+                context_menu.add_command(
+                    label=suggestion,
+                    command=lambda s=suggestion, ws=word_start, we=word_end: self.replace_word(ws, we, s)
+                )
+            context_menu.add_separator()
+        else:
+            # No suggestions available
+            context_menu.add_command(
+                label="(No suggestions)",
+                state=tk.DISABLED
+            )
+            context_menu.add_separator()
+
+        # Add "Add to dictionary" option
+        context_menu.add_command(
+            label=f"Add '{misspelled_word}' to dictionary",
+            command=lambda: self.add_to_dictionary(misspelled_word)
+        )
+
+        # Add "Ignore" option
+        context_menu.add_command(
+            label="Ignore",
+            command=lambda: None  # Just close the menu
+        )
+
+        # Show the menu
+        try:
+            context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            context_menu.grab_release()
+
+        return "break"  # Prevent default right-click behavior
+
+    def replace_word(self, start, end, new_word):
+        """Replace a misspelled word with the selected suggestion"""
+        self.text_editor.delete(start, end)
+        self.text_editor.insert(start, new_word)
+        self.is_modified = True
+        self.update_title()
+        self.check_spelling()  # Re-run spell check
+
+    def load_custom_dictionary(self):
+        """Load custom words from file"""
+        try:
+            if os.path.exists(self.custom_dict_file):
+                with open(self.custom_dict_file, 'r', encoding='utf-8') as f:
+                    custom_words = [line.strip().lower() for line in f if line.strip()]
+                    if custom_words:
+                        self.spell_checker.word_frequency.load_words(custom_words)
+        except Exception as e:
+            print(f"Error loading custom dictionary: {e}")
+
+    def save_custom_word(self, word):
+        """Save a new word to the custom dictionary file"""
+        try:
+            # Read existing words
+            existing_words = set()
+            if os.path.exists(self.custom_dict_file):
+                with open(self.custom_dict_file, 'r', encoding='utf-8') as f:
+                    existing_words = {line.strip().lower() for line in f if line.strip()}
+
+            # Add new word if not already present
+            word_lower = word.lower()
+            if word_lower not in existing_words:
+                with open(self.custom_dict_file, 'a', encoding='utf-8') as f:
+                    f.write(f"{word_lower}\n")
+        except Exception as e:
+            print(f"Error saving custom word: {e}")
+
+    def add_to_dictionary(self, word):
+        """Add a word to the spell checker's dictionary"""
+        self.spell_checker.word_frequency.load_words([word.lower()])
+        self.save_custom_word(word)  # Save to file for persistence
+        self.check_spelling()  # Re-run spell check to remove highlighting
+        self.status_bar.config(text=f"Added '{word}' to dictionary")
 
     def new_file(self):
         """Create a new file"""
@@ -552,17 +688,17 @@ class MarkdownEditor:
         return sorted(templates)
 
     def populate_templates_menu(self):
-        """Populate the Insert menu with available templates"""
+        """Populate the Templates menu with available templates"""
         # Clear existing menu items
-        self.insert_menu.delete(0, tk.END)
+        self.templates_menu.delete(0, tk.END)
 
         templates = self.get_templates()
 
         if not templates:
-            self.insert_menu.add_command(label="No templates found", state=tk.DISABLED)
+            self.templates_menu.add_command(label="No templates found", state=tk.DISABLED)
         else:
             for template_name, template_path in templates:
-                self.insert_menu.add_command(
+                self.templates_menu.add_command(
                     label=template_name,
                     command=lambda path=template_path: self.load_template(path)
                 )
@@ -678,9 +814,9 @@ LightMD is a focused writing tool with these features:
 {template_info}
 - Spell checking and markdown syntax highlighting
 - Light/dark themes
-- Users can access templates via Insert menu
+- Users can access templates via Templates menu
 
-For detailed help, users can load the "1_Help" template from the Insert menu (if available).
+For detailed help, users can load the "1_Help" template from the Templates menu (if available).
 
 ## Your Capabilities
 You can:
@@ -688,7 +824,7 @@ You can:
 2. **Ask Clarifying Questions**: Help users think through requirements
 3. **Directly Edit Documents**: Use special commands to modify the current document:
    - `REPLACE: [old_text] WITH: [new_text]` - Changes specific text
-     * For empty/nearly empty documents: put user's prompt in [old_text], full content in [new_text]
+     * For empty/nearly empty documents: leave [old_text] blank, like `REPLACE:  WITH: [full content]`
      * For existing documents: use SHORT excerpt (10-30 words) from document in [old_text]
    - `INSERT: [text]` - Adds text at cursor position
    - `APPEND: [text]` - Adds text to end of document
@@ -700,11 +836,12 @@ You can:
 - Reference LightMD features when relevant (e.g., "You can track this in the variables sidebar")
 
 ## Important Guidelines
-- When creating new content for empty documents: use REPLACE with user's question as [old_text]
+- When creating new content for empty/nearly empty documents: use `REPLACE:  WITH: [content]` (leave old_text blank)
+- When editing existing documents: use `REPLACE: [short excerpt] WITH: [new text]`
 - Suggest appropriate templates when relevant to user's task
 - Encourage use of variables for reusable values
 - Write clear, structured AI instructions following best practices
-- Be specific about which template to use from the Insert menu"""
+- Be specific about which template to use from the Templates menu"""
 
             # Build messages with history
             messages = []
@@ -743,11 +880,50 @@ You can:
 
     def process_ai_response(self, response):
         """Process AI response and handle special commands"""
+        # Debug: log the response for troubleshooting
+        print(f"DEBUG: Response starts with: {repr(response[:50])}")
+
+        # Look for commands that might be embedded in the response (after explanatory text)
+        # Commands might be wrapped in backticks like `REPLACE: ... WITH: ...`
+        command_response = None
+        explanation_text = None
+
+        # Check if there's a backtick-wrapped command in the response
+        if '`REPLACE:' in response or '`INSERT:' in response or '`APPEND:' in response:
+            # Extract the command from backticks
+            import re
+            # Match single or triple backticks containing a command
+            match = re.search(r'`+\s*((?:REPLACE|INSERT|APPEND):.*?)`+', response, re.DOTALL)
+            if match:
+                command_response = match.group(1).strip()
+                # Get the explanation (text before the command)
+                explanation_text = response[:match.start()].strip()
+                print(f"DEBUG: Found command in backticks: {repr(command_response[:50])}")
+
+        # If no backtick command found, check if response starts with a command
+        if not command_response:
+            cleaned_response = response.strip()
+            if cleaned_response.startswith('REPLACE:') or cleaned_response.startswith('INSERT:') or cleaned_response.startswith('APPEND:'):
+                command_response = cleaned_response
+                print(f"DEBUG: Response starts with command")
+
+        # If still no command found, treat as regular response
+        if not command_response:
+            print(f"DEBUG: No command found, showing as regular response")
+            self.append_chat_message("Assistant", response)
+            return
+
+        print(f"DEBUG: Processing command: {repr(command_response[:50])}")
+
+        # If there was explanatory text, show it first
+        if explanation_text:
+            self.append_chat_message("Assistant", explanation_text)
+
         # Check for special commands
-        if response.startswith("REPLACE:"):
+        if command_response.startswith("REPLACE:"):
             try:
                 # Parse REPLACE command
-                parts = response.split("WITH:", 1)
+                parts = command_response.split("WITH:", 1)
                 if len(parts) == 2:
                     old_text = parts[0].replace("REPLACE:", "").strip()
                     new_text = parts[1].strip()
@@ -755,12 +931,13 @@ You can:
                     # Get current content
                     content = self.text_editor.get('1.0', tk.END).strip()
 
-                    # If document is mostly empty (less than 50 chars), just replace everything
-                    if len(content) < 50:
+                    # If old_text is empty or document is mostly empty (less than 50 chars), just replace everything
+                    if not old_text or len(content) < 50:
                         self.text_editor.delete('1.0', tk.END)
                         self.text_editor.insert('1.0', new_text)
                         self.is_modified = True
                         self.update_title()
+                        self.update_highlighting()
                         self.append_chat_message("Assistant", "✓ Added content to document")
                     elif old_text in content:
                         # Find and replace
@@ -775,6 +952,7 @@ You can:
                             self.text_editor.insert(start_pos, new_text)
                             self.is_modified = True
                             self.update_title()
+                            self.update_highlighting()
 
                             self.append_chat_message("Assistant", "✓ Replaced text in document")
                     else:
@@ -782,23 +960,23 @@ You can:
             except Exception as e:
                 self.append_chat_message("System", f"Error processing REPLACE command: {e}")
 
-        elif response.startswith("INSERT:"):
-            text_to_insert = response.replace("INSERT:", "").strip()
+        elif command_response.startswith("INSERT:"):
+            text_to_insert = command_response.replace("INSERT:", "").strip()
             self.text_editor.insert(tk.INSERT, text_to_insert)
             self.is_modified = True
             self.update_title()
             self.append_chat_message("Assistant", f"✓ Inserted text at cursor position")
 
-        elif response.startswith("APPEND:"):
-            text_to_append = response.replace("APPEND:", "").strip()
+        elif command_response.startswith("APPEND:"):
+            text_to_append = command_response.replace("APPEND:", "").strip()
             self.text_editor.insert(tk.END, f"\n{text_to_append}")
             self.is_modified = True
             self.update_title()
             self.append_chat_message("Assistant", f"✓ Appended text to document")
 
         else:
-            # Regular response
-            self.append_chat_message("Assistant", response)
+            # If we got here, command wasn't recognized - show error
+            self.append_chat_message("System", f"Unrecognized command format. Command must start with REPLACE:, INSERT:, or APPEND:")
 
     def clear_chat(self):
         """Clear the chat history and display"""

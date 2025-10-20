@@ -18,7 +18,7 @@ LightMD is a specialized markdown text editor built to help you write high-quali
 ## Quick Start
 
 ### 1. Using Templates
-The **Insert** menu provides pre-built templates for common use cases:
+The **Templates** menu provides pre-built templates for common use cases:
 - **Agent**: AI agent system prompts and instructions
 - **PRD**: Prompt Requirements Documents
 - **CodeReview**: Structured code review guidelines
@@ -33,7 +33,7 @@ The **Insert** menu provides pre-built templates for common use cases:
 - **RefactoringPlan**: Code refactoring strategy
 
 **To use a template:**
-1. Click **Insert** in the menu bar
+1. Click **Templates** in the menu bar
 2. Select your desired template
 3. The template loads as a new unsaved document
 4. Customize it for your needs and save with a new filename
@@ -84,7 +84,7 @@ The built-in AI assistant helps you create, edit, and improve your documents.
 **What the AI Assistant Knows:**
 - **About LightMD**: The AI understands it's helping you use a markdown editor designed for AI instruction documents
 - **Your Document**: The AI always has access to your current document content
-- **Templates Available**: The AI dynamically knows about ALL templates in the Insert menu (including any custom ones you add!)
+- **Templates Available**: The AI dynamically knows about ALL templates in the Templates menu (including any custom ones you add!)
 - **Standards & Best Practices**: The AI is trained on writing effective AI instructions and PRDs
 - **Conversation History**: The AI remembers your last 10 exchanges for context
 
@@ -201,7 +201,7 @@ Want to add custom templates?
 1. Create a new `.md` file in the `Templates` folder
 2. Name it descriptively (e.g., `ChatbotPrompt.md`, `EmailTemplate.md`)
 3. Add your template content with variables and structure
-4. Restart LightMD or reopen the Insert menu
+4. Restart LightMD or reopen the Templates menu
 5. Your template appears automatically!
 
 **Tips:**

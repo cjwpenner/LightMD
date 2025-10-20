@@ -50,15 +50,15 @@ python lightmd.py
 ## Usage
 
 ### Templates
-The **Insert** menu dynamically shows all `.md` files from the `Templates` folder. Simply:
-1. Click **Insert** in the menu bar
+The **Templates** menu dynamically shows all `.md` files from the `Templates` folder. Simply:
+1. Click **Templates** in the menu bar
 2. Select a template (e.g., Agent, PRD)
 3. The template content loads into a new document
 4. Save with a new filename - your original template remains unchanged
 
 To add your own templates:
 - Place any `.md` file in the `Templates` folder
-- Restart LightMD or reopen the Insert menu
+- Restart LightMD or reopen the Templates menu
 - Your new templates will appear automatically
 
 ### Variables
