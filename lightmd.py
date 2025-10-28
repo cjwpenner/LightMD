@@ -113,14 +113,21 @@ class MarkdownEditor:
         file_menu.add_command(label="Save", command=self.save_file, accelerator="Ctrl+S")
         file_menu.add_command(label="Save As...", command=self.save_file_as, accelerator="Ctrl+Shift+S")
         file_menu.add_separator()
+        file_menu.add_command(label="Print...", command=self.print_file, accelerator="Ctrl+P")
+        file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.exit_app)
 
         # Edit Menu
         edit_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Edit", menu=edit_menu)
+        edit_menu.add_command(label="Undo", command=self.undo_text, accelerator="Ctrl+Z")
+        edit_menu.add_separator()
         edit_menu.add_command(label="Cut", command=self.cut_text, accelerator="Ctrl+X")
         edit_menu.add_command(label="Copy", command=self.copy_text, accelerator="Ctrl+C")
         edit_menu.add_command(label="Paste", command=self.paste_text, accelerator="Ctrl+V")
+        edit_menu.add_separator()
+        edit_menu.add_command(label="Bold", command=self.format_bold, accelerator="Ctrl+B")
+        edit_menu.add_command(label="Italic", command=self.format_italic, accelerator="Ctrl+I")
         edit_menu.add_separator()
         edit_menu.add_command(label="Insert Table", command=self.insert_table, accelerator="Ctrl+T")
 
@@ -228,9 +235,26 @@ class MarkdownEditor:
         input_frame = ttk.Frame(chat_frame)
         input_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        self.chat_input = tk.Entry(input_frame, font=('Consolas', 10))
-        self.chat_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self.chat_input.bind('<Return>', lambda e: self.send_chat_message())
+        # Input text area with scrollbar
+        input_scroll_frame = ttk.Frame(input_frame)
+        input_scroll_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        input_scrollbar = ttk.Scrollbar(input_scroll_frame)
+        input_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.chat_input = tk.Text(
+            input_scroll_frame,
+            font=('Consolas', 10),
+            height=2,
+            wrap=tk.WORD,
+            yscrollcommand=input_scrollbar.set
+        )
+        self.chat_input.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        input_scrollbar.config(command=self.chat_input.yview)
+
+        # Bind Enter to send (Shift+Enter for new line)
+        self.chat_input.bind('<Return>', lambda e: self.send_chat_message() or "break")
+        self.chat_input.bind('<Shift-Return>', lambda e: None)  # Allow Shift+Enter for newline
 
         send_button = ttk.Button(input_frame, text="Send", command=self.send_chat_message)
         send_button.pack(side=tk.RIGHT, padx=(5, 0))
@@ -265,9 +289,13 @@ class MarkdownEditor:
         self.root.bind('<Control-o>', lambda e: self.open_file())
         self.root.bind('<Control-s>', lambda e: self.save_file())
         self.root.bind('<Control-Shift-S>', lambda e: self.save_file_as())
+        self.root.bind('<Control-p>', lambda e: self.print_file())
+        self.root.bind('<Control-z>', lambda e: self.undo_text())
         self.root.bind('<Control-x>', lambda e: self.cut_text())
         self.root.bind('<Control-c>', lambda e: self.copy_text())
         self.root.bind('<Control-v>', lambda e: self.paste_text())
+        self.root.bind('<Control-b>', lambda e: self.format_bold())
+        self.root.bind('<Control-i>', lambda e: self.format_italic())
         self.root.bind('<Control-t>', lambda e: self.insert_table())
         self.root.bind('<Control-d>', lambda e: self.toggle_theme())
 
@@ -553,6 +581,35 @@ class MarkdownEditor:
             self.current_file = file_path
             self.save_file()
 
+    def print_file(self):
+        """Print the current document"""
+        try:
+            # Get the content
+            content = self.text_editor.get('1.0', tk.END)
+
+            # On Windows, use notepad to print
+            if sys.platform == 'win32':
+                import tempfile
+                # Create a temporary file
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+                    f.write(content)
+                    temp_path = f.name
+
+                # Open in notepad and let user print from there
+                import subprocess
+                subprocess.run(['notepad', '/p', temp_path], check=False)
+
+                # Clean up temp file after a delay (notepad needs time to read it)
+                self.root.after(5000, lambda: os.remove(temp_path) if os.path.exists(temp_path) else None)
+            else:
+                # For other platforms, show a dialog
+                messagebox.showinfo(
+                    "Print",
+                    "Use your system's print functionality (Ctrl+P in most browsers after saving the file)"
+                )
+        except Exception as e:
+            messagebox.showerror("Print Error", f"Failed to print: {str(e)}")
+
     def cut_text(self):
         """Cut selected text"""
         try:
@@ -573,6 +630,54 @@ class MarkdownEditor:
         """Paste text from clipboard"""
         try:
             self.text_editor.event_generate("<<Paste>>")
+        except:
+            pass
+        return "break"
+
+    def undo_text(self):
+        """Undo last edit"""
+        try:
+            self.text_editor.edit_undo()
+        except:
+            pass
+        return "break"
+
+    def format_bold(self):
+        """Wrap selected text in ** for markdown bold"""
+        try:
+            # Check if there's a selection
+            if self.text_editor.tag_ranges("sel"):
+                # Get selected text
+                selected_text = self.text_editor.get("sel.first", "sel.last")
+                # Replace with bold markdown
+                self.text_editor.delete("sel.first", "sel.last")
+                self.text_editor.insert(tk.INSERT, f"**{selected_text}**")
+            else:
+                # No selection, insert markers at cursor
+                self.text_editor.insert(tk.INSERT, "****")
+                # Move cursor between the markers
+                current_pos = self.text_editor.index(tk.INSERT)
+                self.text_editor.mark_set(tk.INSERT, f"{current_pos}-2c")
+        except:
+            pass
+        return "break"
+
+    def format_italic(self):
+        """Wrap selected text in * for markdown italic"""
+        try:
+            # Check if there's a selection
+            if self.text_editor.tag_ranges("sel"):
+                # Get selected text
+                selected_text = self.text_editor.get("sel.first", "sel.last")
+                # Replace with italic markdown
+                self.text_editor.delete("sel.first", "sel.last")
+                self.text_editor.insert(tk.INSERT, f"*{selected_text}*")
+            else:
+                # No selection, insert markers at cursor
+                self.text_editor.insert(tk.INSERT, "**")
+                # Move cursor between the markers
+                current_pos = self.text_editor.index(tk.INSERT)
+                self.text_editor.mark_set(tk.INSERT, f"{current_pos}-1c")
         except:
             pass
         return "break"
@@ -764,7 +869,7 @@ class MarkdownEditor:
 
     def send_chat_message(self):
         """Send a message to the AI assistant"""
-        user_message = self.chat_input.get().strip()
+        user_message = self.chat_input.get('1.0', tk.END).strip()
         if not user_message:
             return
 
@@ -776,7 +881,7 @@ class MarkdownEditor:
             return
 
         # Clear input
-        self.chat_input.delete(0, tk.END)
+        self.chat_input.delete('1.0', tk.END)
 
         # Display user message
         self.append_chat_message("You", user_message)
