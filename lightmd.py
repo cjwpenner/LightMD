@@ -8,6 +8,7 @@ from tkinter import ttk, filedialog, messagebox, font as tkfont, simpledialog
 import re
 from spellchecker import SpellChecker
 import os
+import sys
 import glob
 import json
 import threading
@@ -141,6 +142,11 @@ class MarkdownEditor:
         menubar.add_cascade(label="Theme", menu=theme_menu)
         theme_menu.add_command(label="Toggle Light/Dark", command=self.toggle_theme, accelerator="Ctrl+D")
 
+        # AI Menu
+        ai_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="AI", menu=ai_menu)
+        ai_menu.add_command(label="Set API Key...", command=self.configure_api_key)
+
         # Main container
         main_container = ttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         main_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -256,15 +262,12 @@ class MarkdownEditor:
         self.chat_input.bind('<Return>', lambda e: self.send_chat_message() or "break")
         self.chat_input.bind('<Shift-Return>', lambda e: None)  # Allow Shift+Enter for newline
 
-        send_button = ttk.Button(input_frame, text="Send", command=self.send_chat_message)
-        send_button.pack(side=tk.RIGHT, padx=(5, 0))
-
-        # Button frame for API key and clear chat
+        # Button frame below input for Send and Clear Chat
         button_frame = ttk.Frame(chat_frame)
         button_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        config_button = ttk.Button(button_frame, text="Configure API Key", command=self.configure_api_key)
-        config_button.pack(side=tk.LEFT, padx=(0, 5))
+        send_button = ttk.Button(button_frame, text="Send", command=self.send_chat_message)
+        send_button.pack(side=tk.LEFT, padx=(0, 5))
 
         clear_button = ttk.Button(button_frame, text="Clear Chat", command=self.clear_chat)
         clear_button.pack(side=tk.LEFT)
@@ -294,8 +297,9 @@ class MarkdownEditor:
         self.root.bind('<Control-x>', lambda e: self.cut_text())
         self.root.bind('<Control-c>', lambda e: self.copy_text())
         self.root.bind('<Control-v>', lambda e: self.paste_text())
-        self.root.bind('<Control-b>', lambda e: self.format_bold())
-        self.root.bind('<Control-i>', lambda e: self.format_italic())
+        # Bold and Italic need special handling to prevent default behavior
+        self.text_editor.bind('<Control-b>', lambda e: self.format_bold())
+        self.text_editor.bind('<Control-i>', lambda e: self.format_italic())
         self.root.bind('<Control-t>', lambda e: self.insert_table())
         self.root.bind('<Control-d>', lambda e: self.toggle_theme())
 
