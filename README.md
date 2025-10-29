@@ -11,7 +11,7 @@ A simple, lightweight WYSIWYG-style markdown editor designed for creating AI ins
 - **Spell Checking**: Real-time spell checking with error highlighting (great for dyslexia support)
 - **Light/Dark Themes**: Toggle between light and dark modes with persistent preference
 - **File Operations**: New, Open, Save, Save As
-- **Edit Tools**: Cut, Copy, Paste, Insert Table
+- **Edit Tools**: Cut, Copy, Paste, Insert Table, Bold, Italics
 - **Keyboard Shortcuts**: All major functions have keyboard shortcuts
 
 ## Installation
@@ -25,12 +25,13 @@ A simple, lightweight WYSIWYG-style markdown editor designed for creating AI ins
 ## Running LightMD
 
 ### Option 1: Double-click the batch file
-Simply double-click `run_lightmd.bat` to start the application.
+Simply double-click `run_lightmd.bat` from your file system to start the application.
 
 ### Option 2: Create a desktop shortcut
-Double-click `create_shortcut.vbs` to create a desktop shortcut for easy access.
+Double-click `create_shortcut.vbs` from your file manager to create a desktop shortcut for easy access.
 
 ### Option 3: Run from command line
+cd to the LightMD folder and run:
 ```bash
 python lightmd.py
 ```
@@ -44,6 +45,9 @@ python lightmd.py
 - **Ctrl+X**: Cut
 - **Ctrl+C**: Copy
 - **Ctrl+V**: Paste
+- **Ctrl+Z**: Undo
+- **Ctrl+B**: Bold (adds "**" at the beginning and end of the highlighted section)
+- **Ctrl+I**: Italics (adds "*" at the beginning and end of the highlighted section)
 - **Ctrl+T**: Insert table template
 - **Ctrl+D**: Toggle dark/light theme
 
@@ -71,7 +75,7 @@ Variables are automatically detected when you type them in the format `{{variabl
 All detected variables appear in the sidebar. Double-click a variable to insert it at your cursor position.
 
 ### Spell Checking
-Misspelled words are highlighted with a colored background. The spell checker runs automatically as you type.
+Misspelled words are highlighted with a colored background. The spell checker runs automatically as you type. The Dictionary is not very large, but you can add words to it to make it more tuned to your use case.
 
 ### Markdown Features
 - Headings are highlighted (lines starting with `#`, `##`, etc.)
@@ -84,8 +88,9 @@ The integrated AI assistant helps you create and edit markdown documents:
 **Getting Started**:
 1. Click "Configure API Key" in the AI Assistant panel
 2. Enter your Anthropic API key (get one at https://console.anthropic.com/)
-3. Select your preferred model: Claude Sonnet 4.5 (default) or Claude Haiku 4.5
+3. Select your preferred model: Claude Sonnet 4.5  or Claude Haiku 4.5 (less expensive, default)
 4. Start chatting!
+5. For extended instructions to the AI, you can simply write your query in the main document and then in the AI chat input ask the LLM to execute the instructions in the document.
 
 **What the AI Can Do**:
 - **Provide Advice**: Ask questions about your document structure, content, or best practices
@@ -112,11 +117,25 @@ Your theme choice (light or dark) is automatically saved to `lightmd_config.json
 ## Future Enhancements
 
 Planned features include:
-- Custom variable templates
 - Export to PDF
-- Preview pane with rendered markdown
-- Extended AI commands for more complex document transformations
+- Extended testing and enhancmeent of the AI commands for more complex document transformations
 
 ## License
 
-Free to use and modify.
+LightMD is dual-licensed:
+
+### Open Source License (GPLv3)
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+You are free to use, modify, and distribute this software under the terms of GPLv3, which requires that derivative works also be open-source and licensed under GPLv3.
+
+### Commercial License
+If you wish to use LightMD in a proprietary or closed-source application without the requirements of GPLv3, a commercial license is available. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for more information.
+
+**Contact for commercial licensing:**
+- Email: maire@thyrel.co.uk
+- Website: www.thyrel.co.uk
+
+### Why Dual Licensing?
+- **Open Source (GPLv3)**: Encourages community contributions and showcases innovation
+- **Commercial**: Allows businesses to integrate LightMD without open-source obligations while supporting ongoing development
