@@ -133,7 +133,7 @@ You are free to use, modify, and distribute this software under the terms of GPL
 If you wish to use LightMD in a proprietary or closed-source application without the requirements of GPLv3, a commercial license is available. See [COMMERCIAL_LICENSE.md](COMMERCIAL_LICENSE.md) for more information.
 
 **Contact for commercial licensing:**
-- Email: maire@thyrel.co.uk
+- Email: marie@thyrel.co.uk
 - Website: www.thyrel.co.uk
 
 ### Why Dual Licensing?
