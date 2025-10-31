@@ -120,6 +120,28 @@ Planned features include:
 - Export to PDF
 - Extended testing and enhancmeent of the AI commands for more complex document transformations
 
+## Third-Party Libraries
+
+LightMD is built using the following open source libraries:
+
+- **[tkinter](https://docs.python.org/3/library/tkinter.html)** - Python's standard GUI library (part of Python Standard Library)
+  - Used for: Application interface and windowing
+  - License: Python Software Foundation License
+
+- **[pyspellchecker](https://github.com/barrust/pyspellchecker)** (v0.7.2) by Tyler Barrus
+  - Used for: Real-time spell checking functionality
+  - License: MIT License
+
+- **[Anthropic Python SDK](https://github.com/anthropics/anthropic-sdk-python)** (v0.40.0+)
+  - Used for: Claude AI integration for the AI Assistant feature
+  - License: MIT License
+
+- **[Pillow (PIL Fork)](https://python-pillow.org/)** (v10.2.0)
+  - Used for: Image processing capabilities
+  - License: HPND License (Historical Permission Notice and Disclaimer)
+
+We are grateful to the maintainers and contributors of these projects for their excellent work.
+
 ## License
 
 LightMD is dual-licensed:

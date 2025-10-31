@@ -1,6 +1,15 @@
 """
 LightMD - Lightweight Markdown Editor
 A simple WYSIWYG-style markdown editor for creating AI instruction documents
+
+Copyright (C) 2024 Thyrel Ltd.
+Licensed under GPLv3 - see LICENSE file for details
+
+This application uses the following open source libraries:
+- tkinter: Python's standard GUI library (PSF License)
+- pyspellchecker (v0.7.2): Spell checking by Tyler Barrus (MIT License)
+- anthropic-sdk: Claude AI integration (MIT License)
+- Pillow (v10.2.0): Image processing (HPND License)
 """
 
 import tkinter as tk
